@@ -13,7 +13,8 @@ health_insurance_cov_per_rs = 33.33
 other_suggestion = ""
 
 # Set the locale to Indian English
-locale.setlocale(locale.LC_ALL, 'en_IN')
+# locale.setlocale(locale.LC_ALL, 'en_IN')
+locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
 def check_term_cover(term_ins_cover, savings_amount, min_term_cover):
     if(term_ins_cover >= min_term_cover):
