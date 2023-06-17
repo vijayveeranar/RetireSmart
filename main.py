@@ -199,6 +199,8 @@ def start_readiness(term_ins_cover, health_ins_cover, emergency_fund, average_in
     term_suggestion = ""
     dilution_suggestion = ""
     readiness_suggestion = ""
+    summary = ""
+    readiness = 0
     corpus_for_retire = 0
     savings_amount = average_income_mon - (monthly_expense + monthly_emi)
     min_term_cover = min((average_income_mon * 12 * 10), 20000000)
