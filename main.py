@@ -11,7 +11,7 @@ curr_asset = 0
 term_insurance_cov_per_rs = 8000
 health_insurance_cov_per_rs = 33.33
 other_suggestion = ""
-
+health_suggestion = ""
 # Set the locale to Indian English
 locale.setlocale(locale.LC_ALL, 'en_IN')
 # locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
@@ -120,12 +120,11 @@ def plan_for_tomorrow(average_income_mon, savings_amount, years_to_retire, annua
         formatted_medium_risk_alloc = locale.currency(medium_risk_alloc, grouping=True)
         formatted_low_risk_alloc = locale.currency(low_risk_alloc, grouping=True)
         surplus_suggestion = f"On a monthly basis, allocate {formatted_low_risk_alloc} rs to low-risk mutual funds (such as Nifty), {formatted_medium_risk_alloc} rs to medium-risk mutual funds (sectoral/mid-cap), and {formatted_high_risk_alloc} rs to high-risk mutual funds (like small-cap)."
-        savings_amount = 0
         corpus_for_retire = calculate_monthly_investment_return(savings_amount, annual_return_rate, years_to_retire)
-
+        savings_amount = 0
     return surplus_suggestion, savings_amount, corpus_for_retire
 
-def more_for_retire(savings_amount, monthly_rent, years_to_retire, annual_return_rate):
+def more_for_retire(savings_amount, monthly_rent, years_to_retire, annual_return_rate, corpus_for_retire):
     if(monthly_rent > 10000 and savings_amount >= (3*monthly_rent)):
         other_suggestion = "Eliminate monthly rental expense by purchasing a house."
     else:
@@ -147,16 +146,28 @@ def calculate_corpus_for_monthly_income(monthly_income, annual_return_rate):
     corpus = monthly_income / monthly_return_rate
 
     return corpus
+def calculate_monthly_interest(principal, annual_interest_rate):
+    monthly_interest_rate = (annual_interest_rate*0.01) / 12
+    monthly_interest_amount = principal * monthly_interest_rate
+    return monthly_interest_amount
+
 
 def retirement_readiness(corpus_for_retire, monthly_income_post_ret, annual_return_rate, rental_income_ret, \
                          monthly_pension_ret, curr_asset) :
+    dilution_suggestion = ""
     monthly_income_post_ret = monthly_income_post_ret - (monthly_pension_ret + rental_income_ret)
     req_corpus_for_ret = calculate_corpus_for_monthly_income(monthly_income_post_ret, annual_return_rate)
     readiness = corpus_for_retire / req_corpus_for_ret
-    if(readiness < 1):
+    if(readiness < 1 and curr_asset > 50000):
         dilution_of_assets_req = min(req_corpus_for_ret, curr_asset)
+        # you need to exclude rental and recaculate the need for additional corpus because mostly you will dilute the rent generating asset
+        # rental_impact = dilution_of_assets_req * 0.0025
+        # rental_income_ret = max(0, rental_income_ret - rental_impact)
+        # additional_dilution_needed = calculate_corpus_for_monthly_income(rental_impact, annual_return_rate)
+        # dilution_of_assets_req = min(dilution_of_assets_req +  additional_dilution_needed, curr_asset)
         formatted_dilution_of_assets_req = locale.currency(round(dilution_of_assets_req,0), grouping=True)
-        dilution_suggestion = f"Consider diluting {formatted_dilution_of_assets_req} when nearing retirement and invest them in annuity plans"
+        formatted_corpus_for_retire = locale.currency(round(corpus_for_retire,0), grouping=True)
+        dilution_suggestion = f"When you approach retirement age, it is advisable to dilute your assets and distribute the proceeds of {formatted_dilution_of_assets_req} to buy monthly income plans like (POMIS, SWP, MIP). Additionally, you can utilize the funds accumulated from your investments, amounting to {formatted_corpus_for_retire}, and allocate them towards annuity plans as you near retirement."
         corpus_for_retire = corpus_for_retire + dilution_of_assets_req
         readiness = corpus_for_retire / req_corpus_for_ret
 
@@ -166,40 +177,51 @@ def retirement_readiness(corpus_for_retire, monthly_income_post_ret, annual_retu
     else:
         readiness = round(readiness * 100)
         readiness_suggestion = f"if you go by the suggested plan above then you are {readiness} % ready for your retirement. To increase readiness consider increasing our income or reduce expenses"
-    return readiness, dilution_suggestion, readiness_suggestion
+    annuity_mon_ret = calculate_monthly_interest(corpus_for_retire, annual_return_rate)
+    tot_mon_income = monthly_pension_ret + rental_income_ret + annuity_mon_ret
+    formatted_monthly_pension_ret = locale.currency(round(monthly_pension_ret,0), grouping=True)
+    formatted_rental_income_ret = locale.currency(round(rental_income_ret,0), grouping=True)
+    formatted_annuity_mon_ret = locale.currency(round(annuity_mon_ret,0), grouping=True)
+    formatted_tot_mon_income = locale.currency(round(tot_mon_income,0), grouping=True)
+    summary = f"Upon retirement, you will begin receiving a monthly pension of {formatted_monthly_pension_ret}. In addition, you will have rental income of {formatted_rental_income_ret} from your properties. Furthermore, you can expect a monthly annuity pension of {formatted_annuity_mon_ret}. Altogether, your total monthly income will amount to {formatted_tot_mon_income}."
+    return readiness, dilution_suggestion, readiness_suggestion, summary
 
 
 
 def start_readiness(term_ins_cover, health_ins_cover, emergency_fund, average_income_mon, \
                     monthly_emi, monthly_expense, current_age, retirement_age, rental_income_ret, \
                         monthly_pension_ret, curr_asset, exp_monthly_income_ret):
-
+    
+    health_suggestion = ""
+    emergency_suggestion = ""
+    surplus_suggestion = ""
+    other_suggestion = ""
+    term_suggestion = ""
+    dilution_suggestion = ""
+    readiness_suggestion = ""
+    corpus_for_retire = 0
     savings_amount = average_income_mon - (monthly_expense + monthly_emi)
     min_term_cover = min((average_income_mon * 12 * 10), 20000000)
     min_health_cover = min(average_income_mon / 6, 500000)
     years_to_retire = retirement_age - current_age
-    annual_return_rate = 14
+    annual_return_rate = 8
     monthly_income_post_ret = exp_monthly_income_ret
 
     min_emergency_cover = 6*average_income_mon
     if(savings_amount >= 500):
-
         term_suggestion, health_suggestion, emergency_suggestion, savings_amount = \
             save_your_today(term_ins_cover, health_ins_cover, emergency_fund, savings_amount, min_term_cover, \
                             min_health_cover, min_emergency_cover)
     else:
-        term_suggestion = f"You are left with a monthly savings of {savings_amount}. No savings possible due to financial constraints. Improve financial situation: Upskill for better job or reduce expenses"
+        term_suggestion = f"Insufficient funds for savings! Increase income or reduce expenses. Secure basic insurance and emergency cover for present stability."
     
-    surplus_suggestion, savings_amount, corpus_for_retire = plan_for_tomorrow(average_income_mon, savings_amount, years_to_retire, annual_return_rate)
-
-
     if(savings_amount > 1000):
+        surplus_suggestion, savings_amount, corpus_for_retire = plan_for_tomorrow(average_income_mon, savings_amount, years_to_retire, annual_return_rate)
+    if(savings_amount > 1000):
+        
         other_suggestion, corpus_for_retire = more_for_retire(savings_amount, monthly_rent, years_to_retire, annual_return_rate, corpus_for_retire)
-    else:
-        other_suggestion = ""
-    
-    readiness, dilution_suggestion, readiness_suggestion = retirement_readiness(corpus_for_retire, monthly_income_post_ret, \
+    readiness, dilution_suggestion, readiness_suggestion, summary = retirement_readiness(corpus_for_retire, monthly_income_post_ret, \
                                                            annual_return_rate, rental_income_ret, \
                                                             monthly_pension_ret, curr_asset)
-    return term_suggestion, health_suggestion, emergency_suggestion, surplus_suggestion, other_suggestion,readiness, dilution_suggestion, readiness_suggestion
+    return term_suggestion, health_suggestion, emergency_suggestion, surplus_suggestion, other_suggestion,readiness, dilution_suggestion, readiness_suggestion, summary
 
